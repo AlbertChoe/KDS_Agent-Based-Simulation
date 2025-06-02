@@ -8,7 +8,7 @@ from shapely.geometry import Point
 # --- Configuration ---
 GRID_WIDTH = 1000
 GRID_HEIGHT = 1000
-STEPS_PER_YEAR = 54    # 54 steps (weeks) per year
+STEPS_PER_YEAR = 52    # 54 steps (weeks) per year
 SIMULATION_STEPS = STEPS_PER_YEAR * 3 # Total number of steps (weeks) to run the simulation
 
 # --- GIS Data Configuration ---
@@ -27,47 +27,188 @@ HIGHLAND_CORE_RATIO = 0.3
 # These values are now annual rates or durations in years.
 # A helper function will convert them to per-step values.
 SPECIES_DATA_ANNUAL = {
-    "GroundFinch": {
-        "annual_repro_rate": 0.12,       # Annual reproduction probability
-        "annual_mortality_base": 0.025,  # Annual base mortality probability
-        "max_age_years": 10,             # Max age in years
-        "max_energy": 100,
-        "initial_energy_range": (50, 80),
-        "dispersal_skill": 0.2, "sensing_range": 15,
-        "energy_regen_factor": {"Coastal": 1.1, "Scrubland": 1.5, "Highland": 0.8, "Sea": 0},
-        "base_energy_regen_land": 8, # Energy regenerated per step (week)
-        "habitat_preference_score": {"Coastal": 5, "Scrubland": 8, "Highland": 2},
-        "move_cost_land": 2, "move_cost_water": 20,
-        "repro_energy_cost": 40, "min_repro_energy": 60,
-        "repro_habitat_bonus": {"Coastal": 1.0, "Scrubland": 1.2, "Highland": 0.7}
-    },
-    "MarineIguana": {
-        "annual_repro_rate": 0.08,
-        "annual_mortality_base": 0.015,
-        "max_age_years": 12,
-        "max_energy": 120,
-        "initial_energy_range": (60, 100),
-        "dispersal_skill": 0.7, "sensing_range": 10,
-        "energy_regen_factor": {"Coastal": 1.8, "Scrubland": 0.5, "Highland": 0.1, "Sea": 0.2},
+    "GalapagosPenguin": {  # Spheniscus mendiculus
+        "annual_repro_rate": 0.50,
+        "annual_mortality_base": 0.067,
+        "max_age_years": 20,
+        "max_energy": 110,
+        "initial_energy_range": (60, 90),
+        "dispersal_skill": 0.10,
+        "sensing_range": 20,
+        "energy_regen_factor": {
+            "Coastal": 1.6,
+            "Scrubland": 0.3,
+            "Highland": 0.0,
+            "Sea": 1.8
+        },
         "base_energy_regen_land": 6,
-        "habitat_preference_score": {"Coastal": 10, "Scrubland": 1, "Highland": 0},
-        "move_cost_land": 3, "move_cost_water": 8,
-        "repro_energy_cost": 50, "min_repro_energy": 70,
-        "repro_habitat_bonus": {"Coastal": 1.5, "Scrubland": 0.5, "Highland": 0.1}
+        "habitat_preference_score": {
+            "Coastal": 9,
+            "Scrubland": 2,
+            "Highland": 0
+        },
+        "move_cost_land": 5,
+        "move_cost_water": 3,
+        "repro_energy_cost": 45,
+        "min_repro_energy": 70,
+
+        "repro_habitat_bonus": {
+            "Coastal": 0,
+            "Scrubland": 0,
+            "Highland": 0
+        }
     },
-    "BlueFootedBooby": {
-        "annual_repro_rate": 0.06,
-        "annual_mortality_base": 0.01,
-        "max_age_years": 15,
-        "max_energy": 150,
-        "initial_energy_range": (80, 130),
-        "dispersal_skill": 0.9, "sensing_range": 30,
-        "energy_regen_factor": {"Coastal": 1.6, "Scrubland": 0.8, "Highland": 0.5, "Sea": 0.1},
+    "FlightlessCormorant": {  # Nannopterum harrisi
+        "annual_repro_rate": 0.30,
+        "annual_mortality_base": 0.13,
+        "max_age_years": 13,
+        "max_energy": 120,
+        "initial_energy_range": (70, 100),
+        "dispersal_skill": 0.05,
+        "sensing_range": 12,
+        "energy_regen_factor": {
+            "Coastal": 1.7, 
+            "Scrubland": 0.4, 
+            "Highland": 0.0, 
+            "Sea": 1.0
+        },
+        "base_energy_regen_land": 6,
+        "habitat_preference_score": {
+            "Coastal": 9,
+            "Scrubland": 1,
+            "Highland": 0
+        },
+        "move_cost_land": 4, 
+        "move_cost_water": 4,
+        "repro_energy_cost": 50, 
+        "min_repro_energy": 80,
+        "repro_habitat_bonus": {
+            "Coastal": 0,
+            "Scrubland": 0,
+            "Highland": 0
+        }
+    },
+    "LavaGull": {  # Leucophaeus fuliginosus
+        "annual_repro_rate": 0.50,
+        "annual_mortality_base": 0.067,
+        "max_age_years": 20,
+        "max_energy": 130,
+        "initial_energy_range": (70, 110),
+        "dispersal_skill": 0.40,
+        "sensing_range": 18,
+        "energy_regen_factor": {
+            "Coastal": 1.6,
+            "Scrubland": 0.7,
+            "Highland": 0.3,
+            "Sea": 0.3
+        },
         "base_energy_regen_land": 7,
-        "habitat_preference_score": {"Coastal": 9, "Scrubland": 3, "Highland": 1},
-        "move_cost_land": 4, "move_cost_water": 5,
-        "repro_energy_cost": 60, "min_repro_energy": 80,
-        "repro_habitat_bonus": {"Coastal": 1.3, "Scrubland": 0.8, "Highland": 0.4}
+        "habitat_preference_score": {
+            "Coastal": 9,
+            "Scrubland": 4,
+            "Highland": 1
+        },
+        "move_cost_land": 3,
+        "move_cost_water": 4,
+        "repro_energy_cost": 55,
+        "min_repro_energy": 85,
+        "repro_habitat_bonus": {
+            "Coastal": 0,
+            "Scrubland": 0,
+            "Highland": 0
+        }
+    },
+    
+    "WavedAlbatross": {  # Phoebastria irrorata
+        "annual_repro_rate": 0.50,
+        "annual_mortality_base": 0.075,
+        "max_age_years": 20,
+        "max_energy": 160,
+        "initial_energy_range": (90, 140),
+        "dispersal_skill": 0.95,
+        "sensing_range": 35,
+        "energy_regen_factor": {
+            "Coastal": 1.4,
+            "Scrubland": 0.5,
+            "Highland": 0.2,
+            "Sea": 1.0
+        },
+        "base_energy_regen_land": 6,
+        "habitat_preference_score": {
+            "Coastal": 8,
+            "Scrubland": 3,
+            "Highland": 1
+        },
+        "move_cost_land": 6,
+        "move_cost_water": 4,
+        "repro_energy_cost": 70,
+        "min_repro_energy": 100,
+        "repro_habitat_bonus": {
+            "Coastal": 0,
+            "Scrubland": 0,
+            "Highland": 0
+        }
+    },
+    "GalapagosHawk": {  # Buteo galapagoensis
+        "annual_repro_rate": 0.50,
+        "annual_mortality_base": 0.12,
+        "max_age_years": 20,
+        "max_energy": 140,
+        "initial_energy_range": (80, 120),
+        "dispersal_skill": 0.30,
+        "sensing_range": 25,
+        "energy_regen_factor": {
+            "Coastal": 1.0,
+            "Scrubland": 1.3,
+            "Highland": 1.1,
+            "Sea": 0.0
+        },
+        "base_energy_regen_land": 8,
+        "habitat_preference_score": {
+            "Coastal": 6,
+            "Scrubland": 8,
+            "Highland": 7
+        },
+        "move_cost_land": 4,
+        "move_cost_water": 25,
+        "repro_energy_cost": 60,
+        "min_repro_energy": 90,
+        "repro_habitat_bonus": {
+            "Coastal": 0,
+            "Scrubland": 0,
+            "Highland": 0
+        }
+    },
+
+    "MangroveFinch": {  # Camarhynchus heliobates
+        "annual_repro_rate": 0.30,
+        "annual_mortality_base": 0.15,
+        "max_age_years": 12,
+        "max_energy": 100,
+        "initial_energy_range": (55, 85),
+        "dispersal_skill": 0.05,
+        "sensing_range": 10,
+        "energy_regen_factor": {
+            "Coastal": 0.5,
+            "Scrubland": 0.4,
+            "Highland": 0.1,
+            "Sea": 0.0
+        },
+        "base_energy_regen_land": 7,
+        "habitat_preference_score": {
+            "Coastal": 2,
+            "Scrubland": 9,
+            "Highland": 0
+        },
+        "move_cost_land": 3,
+        "move_cost_water": 25,
+        "repro_energy_cost": 40,
+        "min_repro_energy": 60,
+        "repro_habitat_bonus": {
+            "Coastal": 0,
+            "Scrubland": 0,
+            "Highland": 0
+        }
     }
 }
 INITIAL_POP_PER_SPECIES_PER_ISLAND = 3
@@ -453,23 +594,74 @@ def plot_species_isolation_relationship(model_data_df, islands_info_list, mainla
     plt.title("Species-Isolation Relationship (SIR)"); plt.grid(True, ls="--", alpha=0.5); plt.tight_layout(); plt.show()
 
 def plot_final_distribution(model):
-    plt.figure(figsize=(12, 12 * (model.height/model.width if model.width else 1)))
-    colors = {HABITAT_TYPES["Sea"]:[0.7,0.85,1.0], HABITAT_TYPES["Coastal"]:[0.9,0.85,0.7], HABITAT_TYPES["Scrubland"]:[0.6,0.8,0.6], HABITAT_TYPES["Highland"]:[0.4,0.6,0.4]}
+    plt.figure(figsize=(12, 12 * (model.height / model.width if model.width else 1)))
+    colors = {
+        HABITAT_TYPES["Sea"]: [0.7, 0.85, 1.0],
+        HABITAT_TYPES["Coastal"]: [0.9, 0.85, 0.7],
+        HABITAT_TYPES["Scrubland"]: [0.6, 0.8, 0.6],
+        HABITAT_TYPES["Highland"]: [0.4, 0.6, 0.4]
+    }
     rgb_map = np.zeros((model.height, model.width, 3))
     for r in range(model.height):
-        for c in range(model.width): rgb_map[r,c,:] = colors.get(model.habitat_map[c,r], [0,0,0])
-    plt.imshow(rgb_map, origin="lower", extent=[0,model.width,0,model.height])
-    s_colors = {"GroundFinch":"red", "MarineIguana":"purple", "BlueFootedBooby":"cyan"}
+        for c in range(model.width):
+            rgb_map[r, c, :] = colors.get(model.habitat_map[c, r], [0, 0, 0])
+    plt.imshow(rgb_map, origin="lower", extent=[0, model.width, 0, model.height])
+    
+    species_set = {agent.species_name for agent in model.schedule.agents if isinstance(agent, BirdAgent)}
+    species_list = sorted(species_set)
+    
+    if not species_list:
+        plt.title(f"Agent Distribution at Step {model.schedule.steps} (tidak ada agen)")
+        plt.xlabel("X")
+        plt.ylabel("Y")
+        plt.grid(True, ls=':', alpha=0.2)
+        plt.xlim(0, model.width)
+        plt.ylim(0, model.height)
+        plt.tight_layout()
+        plt.show()
+        return
+    
+    palette = plt.cm.get_cmap('tab10', len(species_list))
+    s_colors = {sp: palette(i) for i, sp in enumerate(species_list)}
+    
     ax, ay, ac = [], [], []
     for agent in model.schedule.agents:
         if isinstance(agent, BirdAgent) and agent.pos:
-            ax.append(agent.pos[0]+0.5); ay.append(agent.pos[1]+0.5); ac.append(s_colors.get(agent.species_name,"black"))
-    if ax: plt.scatter(ax,ay,c=ac,s=10,marker="o",alpha=0.7,edgecolor='gray',linewidth=0.3)
-    if hasattr(model,'islands_info'):
+            ax.append(agent.pos[0] + 0.5)
+            ay.append(agent.pos[1] + 0.5)
+            ac.append(s_colors.get(agent.species_name, "black"))
+    if ax:
+        plt.scatter(ax, ay, c=ac, s=10, marker="o", alpha=0.7,
+                    edgecolor='gray', linewidth=0.3)
+    
+    handles = []
+    labels = []
+    for sp, col in s_colors.items():
+        handles.append(plt.Line2D([0], [0], marker='o', color='w',
+                                  markerfacecolor=col, markersize=6, alpha=0.7,
+                                  markeredgecolor='gray', markeredgewidth=0.3))
+        labels.append(sp)
+    plt.legend(handles, labels, title="Species", loc="upper right", fontsize=8)
+    
+    if hasattr(model, 'islands_info'):
         for isl in model.islands_info:
-            if isl["area_cells"] > 0: plt.text(isl["centroid_grid"][0],isl["centroid_grid"][1],isl["name"],ha='center',va='center',color='black',fontsize=7,bbox=dict(facecolor='white',alpha=0.5,pad=0.2,boxstyle='round,pad=0.1'))
-    plt.title(f"Agent Distribution at Step {model.schedule.steps} (Week {model.schedule.steps})"); plt.xlabel("X"); plt.ylabel("Y")
-    plt.grid(True,ls=':',alpha=0.2); plt.xlim(0,model.width); plt.ylim(0,model.height); plt.tight_layout(); plt.show()
+            if isl["area_cells"] > 0:
+                plt.text(
+                    isl["centroid_grid"][0], isl["centroid_grid"][1], isl["name"],
+                    ha='center', va='center', color='black', fontsize=7,
+                    bbox=dict(facecolor='white', alpha=0.5, pad=0.2,
+                              boxstyle='round,pad=0.1')
+                )
+    
+    plt.title(f"Agent Distribution at Step {model.schedule.steps}")
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.grid(True, ls=':', alpha=0.2)
+    plt.xlim(0, model.width)
+    plt.ylim(0, model.height)
+    plt.tight_layout()
+    plt.show()
+
 
 # --- Simulation Run & Visualization ---
 if __name__ == "__main__":
