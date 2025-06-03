@@ -155,7 +155,7 @@
     "max_age_years": 12,
     "max_energy": 100,
     "initial_energy_range": [55, 85],
-    "dispersal_skill": 0.05,
+    "dispersal_skill": 0.005,
     "sensing_range": 10,
     "energy_regen_factor": {
       "Coastal": 0.5,
