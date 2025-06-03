@@ -1,0 +1,182 @@
+{
+  "GalapagosPenguin": {
+    "annual_repro_rate": 0.5,
+    "annual_mortality_base": 0.067,
+    "max_age_years": 20,
+    "max_energy": 110,
+    "initial_energy_range": [60, 90],
+    "dispersal_skill": 0.1,
+    "sensing_range": 20,
+    "energy_regen_factor": {
+      "Coastal": 1.6,
+      "Scrubland": 0.3,
+      "Highland": 0.0,
+      "Sea": 1.8
+    },
+    "base_energy_regen_land": 6,
+    "habitat_preference_score": {
+      "Coastal": 9,
+      "Scrubland": 2,
+      "Highland": 0
+    },
+    "move_cost_land": 5,
+    "move_cost_water": 3,
+    "repro_energy_cost": 45,
+    "min_repro_energy": 70,
+    "repro_habitat_bonus": {
+      "Coastal": 0,
+      "Scrubland": 0,
+      "Highland": 0
+    }
+  },
+  "FlightlessCormorant": {
+    "annual_repro_rate": 0.3,
+    "annual_mortality_base": 0.13,
+    "max_age_years": 13,
+    "max_energy": 120,
+    "initial_energy_range": [70, 100],
+    "dispersal_skill": 0.05,
+    "sensing_range": 12,
+    "energy_regen_factor": {
+      "Coastal": 1.7,
+      "Scrubland": 0.4,
+      "Highland": 0.0,
+      "Sea": 1.0
+    },
+    "base_energy_regen_land": 6,
+    "habitat_preference_score": {
+      "Coastal": 9,
+      "Scrubland": 1,
+      "Highland": 0
+    },
+    "move_cost_land": 4,
+    "move_cost_water": 4,
+    "repro_energy_cost": 50,
+    "min_repro_energy": 80,
+    "repro_habitat_bonus": {
+      "Coastal": 0,
+      "Scrubland": 0,
+      "Highland": 0
+    }
+  },
+  "LavaGull": {
+    "annual_repro_rate": 0.5,
+    "annual_mortality_base": 0.067,
+    "max_age_years": 20,
+    "max_energy": 130,
+    "initial_energy_range": [70, 110],
+    "dispersal_skill": 0.4,
+    "sensing_range": 18,
+    "energy_regen_factor": {
+      "Coastal": 1.6,
+      "Scrubland": 0.7,
+      "Highland": 0.3,
+      "Sea": 0.3
+    },
+    "base_energy_regen_land": 7,
+    "habitat_preference_score": {
+      "Coastal": 9,
+      "Scrubland": 4,
+      "Highland": 1
+    },
+    "move_cost_land": 3,
+    "move_cost_water": 4,
+    "repro_energy_cost": 55,
+    "min_repro_energy": 85,
+    "repro_habitat_bonus": {
+      "Coastal": 0,
+      "Scrubland": 0,
+      "Highland": 0
+    }
+  },
+  "WavedAlbatross": {
+    "annual_repro_rate": 0.5,
+    "annual_mortality_base": 0.075,
+    "max_age_years": 20,
+    "max_energy": 160,
+    "initial_energy_range": [90, 140],
+    "dispersal_skill": 0.95,
+    "sensing_range": 35,
+    "energy_regen_factor": {
+      "Coastal": 1.4,
+      "Scrubland": 0.5,
+      "Highland": 0.2,
+      "Sea": 1.0
+    },
+    "base_energy_regen_land": 6,
+    "habitat_preference_score": {
+      "Coastal": 8,
+      "Scrubland": 3,
+      "Highland": 1
+    },
+    "move_cost_land": 6,
+    "move_cost_water": 4,
+    "repro_energy_cost": 70,
+    "min_repro_energy": 100,
+    "repro_habitat_bonus": {
+      "Coastal": 0,
+      "Scrubland": 0,
+      "Highland": 0
+    }
+  },
+  "GalapagosHawk": {
+    "annual_repro_rate": 0.5,
+    "annual_mortality_base": 0.12,
+    "max_age_years": 20,
+    "max_energy": 140,
+    "initial_energy_range": [80, 120],
+    "dispersal_skill": 0.3,
+    "sensing_range": 25,
+    "energy_regen_factor": {
+      "Coastal": 1.0,
+      "Scrubland": 1.3,
+      "Highland": 1.1,
+      "Sea": 0.0
+    },
+    "base_energy_regen_land": 8,
+    "habitat_preference_score": {
+      "Coastal": 6,
+      "Scrubland": 8,
+      "Highland": 7
+    },
+    "move_cost_land": 4,
+    "move_cost_water": 25,
+    "repro_energy_cost": 60,
+    "min_repro_energy": 90,
+    "repro_habitat_bonus": {
+      "Coastal": 0,
+      "Scrubland": 0,
+      "Highland": 0
+    }
+  },
+  "MangroveFinch": {
+    "annual_repro_rate": 0.3,
+    "annual_mortality_base": 0.15,
+    "max_age_years": 12,
+    "max_energy": 100,
+    "initial_energy_range": [55, 85],
+    "dispersal_skill": 0.05,
+    "sensing_range": 10,
+    "energy_regen_factor": {
+      "Coastal": 0.5,
+      "Scrubland": 0.4,
+      "Highland": 0.1,
+      "Sea": 0.0
+    },
+    "base_energy_regen_land": 7,
+    "habitat_preference_score": {
+      "Coastal": 2,
+      "Scrubland": 9,
+      "Highland": 0
+    },
+    "move_cost_land": 3,
+    "move_cost_water": 25,
+    "repro_energy_cost": 40,
+    "min_repro_energy": 60,
+    "repro_habitat_bonus": {
+      "Coastal": 0,
+      "Scrubland": 0,
+      "Highland": 0
+    }
+  }
+}

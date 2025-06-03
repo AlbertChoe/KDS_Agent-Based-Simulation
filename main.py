@@ -1,441 +1,191 @@
-import mesa
+from __future__ import annotations
+import json
+import sys
+import pathlib
 import random
+from typing import Dict, Tuple, Any, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 import geopandas as gpd
 from shapely.geometry import Point
+import mesa
 
-# --- Configuration ---
-GRID_WIDTH = 1000
-GRID_HEIGHT = 1000
-STEPS_PER_YEAR = 52    # 54 steps (weeks) per year
-# Total number of steps (weeks) to run the simulation
-SIMULATION_STEPS = STEPS_PER_YEAR * 3
 
-# --- GIS Data Configuration ---
+DEFAULTS: Dict[str, Any] = {
+    "GRID_WIDTH": 1000,
+    "GRID_HEIGHT": 1000,
+    "STEPS_PER_YEAR": 52,
+    "SIM_YEARS": 3,
+    "INITIAL_POP_DEFAULT": 3,
+    "ANNUAL_MAINLAND_IMMIGRATION_RATE": 0.005,
+}
+
+# GIS
 GALAPAGOS_GIS_FILE = "gadm41_ECU_2.json"
 ISLAND_NAME_COLUMN_IN_GIS = "NAME_2"
 
-# --- Habitat Configuration ---
-HABITAT_TYPES = {
-    "Sea": 0, "Coastal": 1, "Scrubland": 2, "Highland": 3
-}
+# Habitat
+HABITAT_TYPES = {"Sea": 0, "Coastal": 1, "Scrubland": 2, "Highland": 3}
 COASTAL_ZONE_DEPTH = 3
 HIGHLAND_THRESHOLD_AREA = 50
 HIGHLAND_CORE_RATIO = 0.3
 
-# --- Species Configuration (Specified Annually) ---
-# These values are now annual rates or durations in years.
-# A helper function will convert them to per-step values.
-SPECIES_DATA_ANNUAL = {
-    "GalapagosPenguin": {  # Spheniscus mendiculus
-        "annual_repro_rate": 0.50,
-        "annual_mortality_base": 0.067,
-        "max_age_years": 20,
-        "max_energy": 110,
-        "initial_energy_range": (60, 90),
-        "dispersal_skill": 0.10,
-        "sensing_range": 20,
-        "energy_regen_factor": {
-            "Coastal": 1.6,
-            "Scrubland": 0.3,
-            "Highland": 0.0,
-            "Sea": 1.8
-        },
-        "base_energy_regen_land": 6,
-        "habitat_preference_score": {
-            "Coastal": 9,
-            "Scrubland": 2,
-            "Highland": 0
-        },
-        "move_cost_land": 5,
-        "move_cost_water": 3,
-        "repro_energy_cost": 45,
-        "min_repro_energy": 70,
-
-        "repro_habitat_bonus": {
-            "Coastal": 0,
-            "Scrubland": 0,
-            "Highland": 0
-        }
-    },
-    "FlightlessCormorant": {  # Nannopterum harrisi
-        "annual_repro_rate": 0.30,
-        "annual_mortality_base": 0.13,
-        "max_age_years": 13,
-        "max_energy": 120,
-        "initial_energy_range": (70, 100),
-        "dispersal_skill": 0.05,
-        "sensing_range": 12,
-        "energy_regen_factor": {
-            "Coastal": 1.7,
-            "Scrubland": 0.4,
-            "Highland": 0.0,
-            "Sea": 1.0
-        },
-        "base_energy_regen_land": 6,
-        "habitat_preference_score": {
-            "Coastal": 9,
-            "Scrubland": 1,
-            "Highland": 0
-        },
-        "move_cost_land": 4,
-        "move_cost_water": 4,
-        "repro_energy_cost": 50,
-        "min_repro_energy": 80,
-        "repro_habitat_bonus": {
-            "Coastal": 0,
-            "Scrubland": 0,
-            "Highland": 0
-        }
-    },
-    "LavaGull": {  # Leucophaeus fuliginosus
-        "annual_repro_rate": 0.50,
-        "annual_mortality_base": 0.067,
-        "max_age_years": 20,
-        "max_energy": 130,
-        "initial_energy_range": (70, 110),
-        "dispersal_skill": 0.40,
-        "sensing_range": 18,
-        "energy_regen_factor": {
-            "Coastal": 1.6,
-            "Scrubland": 0.7,
-            "Highland": 0.3,
-            "Sea": 0.3
-        },
-        "base_energy_regen_land": 7,
-        "habitat_preference_score": {
-            "Coastal": 9,
-            "Scrubland": 4,
-            "Highland": 1
-        },
-        "move_cost_land": 3,
-        "move_cost_water": 4,
-        "repro_energy_cost": 55,
-        "min_repro_energy": 85,
-        "repro_habitat_bonus": {
-            "Coastal": 0,
-            "Scrubland": 0,
-            "Highland": 0
-        }
-    },
-
-    "WavedAlbatross": {  # Phoebastria irrorata
-        "annual_repro_rate": 0.50,
-        "annual_mortality_base": 0.075,
-        "max_age_years": 20,
-        "max_energy": 160,
-        "initial_energy_range": (90, 140),
-        "dispersal_skill": 0.95,
-        "sensing_range": 35,
-        "energy_regen_factor": {
-            "Coastal": 1.4,
-            "Scrubland": 0.5,
-            "Highland": 0.2,
-            "Sea": 1.0
-        },
-        "base_energy_regen_land": 6,
-        "habitat_preference_score": {
-            "Coastal": 8,
-            "Scrubland": 3,
-            "Highland": 1
-        },
-        "move_cost_land": 6,
-        "move_cost_water": 4,
-        "repro_energy_cost": 70,
-        "min_repro_energy": 100,
-        "repro_habitat_bonus": {
-            "Coastal": 0,
-            "Scrubland": 0,
-            "Highland": 0
-        }
-    },
-    "GalapagosHawk": {  # Buteo galapagoensis
-        "annual_repro_rate": 0.50,
-        "annual_mortality_base": 0.12,
-        "max_age_years": 20,
-        "max_energy": 140,
-        "initial_energy_range": (80, 120),
-        "dispersal_skill": 0.30,
-        "sensing_range": 25,
-        "energy_regen_factor": {
-            "Coastal": 1.0,
-            "Scrubland": 1.3,
-            "Highland": 1.1,
-            "Sea": 0.0
-        },
-        "base_energy_regen_land": 8,
-        "habitat_preference_score": {
-            "Coastal": 6,
-            "Scrubland": 8,
-            "Highland": 7
-        },
-        "move_cost_land": 4,
-        "move_cost_water": 25,
-        "repro_energy_cost": 60,
-        "min_repro_energy": 90,
-        "repro_habitat_bonus": {
-            "Coastal": 0,
-            "Scrubland": 0,
-            "Highland": 0
-        }
-    },
-
-    "MangroveFinch": {  # Camarhynchus heliobates
-        "annual_repro_rate": 0.30,
-        "annual_mortality_base": 0.15,
-        "max_age_years": 12,
-        "max_energy": 100,
-        "initial_energy_range": (55, 85),
-        "dispersal_skill": 0.05,
-        "sensing_range": 10,
-        "energy_regen_factor": {
-            "Coastal": 0.5,
-            "Scrubland": 0.4,
-            "Highland": 0.1,
-            "Sea": 0.0
-        },
-        "base_energy_regen_land": 7,
-        "habitat_preference_score": {
-            "Coastal": 2,
-            "Scrubland": 9,
-            "Highland": 0
-        },
-        "move_cost_land": 3,
-        "move_cost_water": 25,
-        "repro_energy_cost": 40,
-        "min_repro_energy": 60,
-        "repro_habitat_bonus": {
-            "Coastal": 0,
-            "Scrubland": 0,
-            "Highland": 0
-        }
-    }
-}
-INITIAL_POP_PER_SPECIES_PER_ISLAND = 3
-# ANNUAL_MAINLAND_IMMIGRATION_RATE: Probability per species, per year an individual *might* appear.
-# This will be converted to a per-step rate.
-# Example: If 0.005 was intended per original more frequent step.
-ANNUAL_MAINLAND_IMMIGRATION_RATE = 0.005 * STEPS_PER_YEAR
-# Or, if 0.005 is a true annual rate, just use 0.005.
-# Let's assume the 0.005 from before was a good *per-step* rate when steps were more frequent.
-# If the *annual* desired influx is 0.005 *per island*, then this is fine.
-# For clarity: If the goal is "0.005 chance per YEAR for an immigrant to appear",
-# then ANNUAL_MAINLAND_IMMIGRATION_RATE = 0.005.
-# The code below will divide this by STEPS_PER_YEAR.
-# Let's assume the original 0.005 was a per-step rate and steps were (hypothetically) monthly.
-# Then an annual rate would be ~0.005*12.
-# To keep the *per-step* rate the same as in the previous iteration:
-# mainland_immigration_rate_per_step = 0.005
-# If we want to define it annually first, and 0.005 was good per old step:
-# Let's set a plausible *annual* rate:
-
-MAINLAND_POINT = (GRID_WIDTH + 20, GRID_HEIGHT // 2)
-
-# --- Helper Function for Normalizing Annual Data ---
+# species json
+SPECIES_JSON_PATH = pathlib.Path(__file__).with_name("species_data.json")
 
 
-def normalize_simulation_data(annual_species_data, annual_immigration_rate, steps_per_year):
-    """
-    Converts annual species data and immigration rates to per-step values.
-    """
-    processed_species_data = {}
-    for species_name, config in annual_species_data.items():
-        processed_config = config.copy()  # Start with a copy of all original params
-
-        # Convert annual rates/durations to per-step
-        processed_config["repro_rate"] = config["annual_repro_rate"] / \
-            steps_per_year
-        processed_config["mortality_base"] = config["annual_mortality_base"] / steps_per_year
-        processed_config["max_age"] = config["max_age_years"] * steps_per_year
-
-        # Remove the original annual keys to avoid confusion if desired, or keep them
-        # For clarity, let's remove them from the config passed to the agent
-        del processed_config["annual_repro_rate"]
-        del processed_config["annual_mortality_base"]
-        del processed_config["max_age_years"]
-
-        processed_species_data[species_name] = processed_config
-
-    mainland_immigration_rate_per_step = annual_immigration_rate / steps_per_year
-
-    return processed_species_data, mainland_immigration_rate_per_step
-
-# --- Helper Functions ---
+def load_species_json(path: pathlib.Path = SPECIES_JSON_PATH) -> Dict[str, Any]:
+    """Read species definitions from *.json* and massage tuples."""
+    try:
+        with open(path, "r", encoding="utf-8") as fh:
+            raw = json.load(fh)
+        for s in raw.values():
+            if isinstance(s.get("initial_energy_range"), list):
+                s["initial_energy_range"] = tuple(s["initial_energy_range"])
+        return raw
+    except Exception as e:
+        print(f"[FATAL] cannot load species json: {e}", file=sys.stderr)
+        raise
 
 
-def get_habitat_name(habitat_id):
-    for name, id_val in HABITAT_TYPES.items():
-        if id_val == habitat_id:
-            return name
-    return "Unknown"
+SPECIES_DATA_ANNUAL = load_species_json()
 
-# --- Agent Definition ---
+
+def normalize_simulation_data(annual_species_data: Dict[str, Any],
+                              annual_immigration_rate: float,
+                              steps_per_year: int):
+    """Convert annual rates/durations to *per-step* values."""
+    processed_species_data: Dict[str, Any] = {}
+    for sp, cfg in annual_species_data.items():
+        c = cfg.copy()
+        c["repro_rate"] = c["annual_repro_rate"] / steps_per_year
+        c["mortality_base"] = c["annual_mortality_base"] / steps_per_year
+        c["max_age"] = c["max_age_years"] * steps_per_year
+        for k in ("annual_repro_rate", "annual_mortality_base", "max_age_years"):
+            c.pop(k, None)
+        processed_species_data[sp] = c
+
+    return processed_species_data, annual_immigration_rate / steps_per_year
+
+
+def get_habitat_name(hab_id: int) -> str:
+    return next((k for k, v in HABITAT_TYPES.items() if v == hab_id), "Unknown")
 
 
 class BirdAgent(mesa.Agent):
-    def __init__(self, unique_id, model, species_name, initial_pos):
-        super().__init__(unique_id, model)
+
+    def __init__(self, uid: int, model: "GalapagosModel",
+                 species_name: str, initial_pos: Tuple[int, int]):
+        super().__init__(uid, model)
         self.species_name = species_name
-        # self.s_data now contains per-step normalized values
-        # Get processed data
         self.s_data = model.species_data_processed[species_name]
-        self.age = 0  # Age in steps (weeks)
+
+        self.age = 0
         self.energy = random.randint(*self.s_data["initial_energy_range"])
-        # Ensure initial_pos is valid before accessing maps
+
         if 0 <= initial_pos[0] < model.grid.width and 0 <= initial_pos[1] < model.grid.height:
-            self.current_island_id = self.model.island_map_ids[initial_pos[0], initial_pos[1]]
-            self.current_habitat_id = self.model.habitat_map[initial_pos[0], initial_pos[1]]
-        # Fallback if initial_pos is somehow out of bounds (should not happen with proper init)
+            self.current_island_id = model.island_map_ids[initial_pos]
+            self.current_habitat_id = model.habitat_map[initial_pos]
         else:
-            print(
-                f"Warning: Agent {unique_id} ({species_name}) initialized at invalid pos {initial_pos}. Setting default island/habitat.")
-            self.current_island_id = -1  # Sea
+            self.current_island_id = -1
             self.current_habitat_id = HABITAT_TYPES["Sea"]
 
-    def get_preferred_moves(self, possible_moves):
-        scored_moves = []
-        for move in possible_moves:
-            habitat_id_at_move = self.model.habitat_map[move[0], move[1]]
-            habitat_name = get_habitat_name(habitat_id_at_move)
-            score = self.s_data["habitat_preference_score"].get(
-                habitat_name, 0)
-            if habitat_name == "Sea" and hasattr(self, 'target_island_direction') and self.target_island_direction:
-                if len(self.target_island_direction) >= 2:
-                    current_dx, current_dy = move[0] - \
-                        self.pos[0], move[1] - self.pos[1]
-                    similarity = (
-                        current_dx * self.target_island_direction[0] + current_dy * self.target_island_direction[1])
-                    if similarity > 0:
-                        score += 2
-            scored_moves.append((score, move))
-        scored_moves.sort(key=lambda x: x[0], reverse=True)
-        return [move for score, move in scored_moves]
+    def get_preferred_moves(self, nbrs):
+        scored = []
+        for mv in nbrs:
+            hid = self.model.habitat_map[mv]
+            hname = get_habitat_name(hid)
+            score = self.s_data["habitat_preference_score"].get(hname, 0)
+
+            if hname == "Sea" and getattr(self, "target_island_direction", None):
+                dx, dy = mv[0]-self.pos[0], mv[1]-self.pos[1]
+                if (dx * self.target_island_direction[0] +
+                        dy * self.target_island_direction[1]) > 0:
+                    score += 2
+            scored.append((score, mv))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [m for _, m in scored]
 
     def sense_islands(self):
         self.target_island_direction = None
-        if self.model.habitat_map[self.pos[0], self.pos[1]] == HABITAT_TYPES["Sea"]:
-            min_dist, target_island_cell = float('inf'), None
-            for _ in range(8):
-                angle = random.uniform(0, 2 * np.pi)
-                for r in range(1, int(self.s_data["sensing_range"])):
-                    check_x, check_y = int(
-                        self.pos[0] + r * np.cos(angle)), int(self.pos[1] + r * np.sin(angle))
-                    if 0 <= check_x < self.model.grid.width and 0 <= check_y < self.model.grid.height:
-                        if self.model.island_map_types[check_x, check_y] == "land":
-                            dist = np.sqrt(
-                                (check_x - self.pos[0])**2 + (check_y - self.pos[1])**2)
-                            if dist < min_dist:
-                                min_dist, target_island_cell = dist, (
-                                    check_x, check_y)
-                            break
-                    else:
-                        break
-            if target_island_cell:
-                dx, dy = target_island_cell[0] - \
-                    self.pos[0], target_island_cell[1] - self.pos[1]
-                norm = np.sqrt(dx**2 + dy**2)
-                if norm > 0:
-                    self.target_island_direction = (dx/norm, dy/norm)
+        if self.model.habitat_map[self.pos] != HABITAT_TYPES["Sea"]:
+            return
+        best = (float("inf"), None)
+        for _ in range(8):
+            angle = random.uniform(0, 2*np.pi)
+            for r in range(1, int(self.s_data["sensing_range"])):
+                cx = int(self.pos[0] + r*np.cos(angle))
+                cy = int(self.pos[1] + r*np.sin(angle))
+                if not (0 <= cx < self.model.grid.width and 0 <= cy < self.model.grid.height):
+                    break
+                if self.model.island_map_types[cx, cy] == "land":
+                    dist = np.hypot(cx-self.pos[0], cy-self.pos[1])
+                    if dist < best[0]:
+                        best = (dist, (cx, cy))
+                    break
+        if best[1]:
+            dx, dy = best[1][0]-self.pos[0], best[1][1]-self.pos[1]
+            norm = np.hypot(dx, dy)
+            self.target_island_direction = (dx/norm, dy/norm)
 
     def move(self):
-        current_habitat_id = self.model.habitat_map[self.pos[0], self.pos[1]]
-        current_habitat_name = get_habitat_name(current_habitat_id)
-        possible_moves = self.model.grid.get_neighborhood(
+        current_name = get_habitat_name(self.model.habitat_map[self.pos])
+        nbrs = self.model.grid.get_neighborhood(
             self.pos, moore=True, include_center=False)
-        valid_moves = list(possible_moves)
-
-        if not valid_moves:
-            self.energy -= self.s_data["move_cost_land"]
+        if not nbrs:
             return
 
-        if current_habitat_name == "Sea":
+        if current_name == "Sea":
             self.sense_islands()
-        preferred_moves = self.get_preferred_moves(valid_moves)
-        chosen_move, cost = None, 0
 
-        if preferred_moves:
-            if current_habitat_name != "Sea":
-                land_moves = [
-                    m for m in preferred_moves if self.model.habitat_map[m[0], m[1]] != HABITAT_TYPES["Sea"]]
-                water_moves = [
-                    m for m in preferred_moves if self.model.habitat_map[m[0], m[1]] == HABITAT_TYPES["Sea"]]
-                if land_moves and (random.random() > self.s_data["dispersal_skill"] or not water_moves):
-                    chosen_move = land_moves[0]
-                elif water_moves and self.energy > self.s_data["move_cost_water"] * 3:
-                    chosen_move = water_moves[0]
-                elif land_moves:
-                    chosen_move = land_moves[0]
-                else:
-                    chosen_move = preferred_moves[0]
-            else:  # At Sea
-                land_dest_moves = [
-                    m for m in preferred_moves if self.model.habitat_map[m[0], m[1]] != HABITAT_TYPES["Sea"]]
-                chosen_move = land_dest_moves[0] if land_dest_moves else preferred_moves[0]
+        pref = self.get_preferred_moves(nbrs)
+        choice = random.choice(pref) if not pref else pref[0]
+
+        dest_name = get_habitat_name(self.model.habitat_map[choice])
+        cost = self.s_data["move_cost_water"] if dest_name == "Sea" else self.s_data["move_cost_land"]
+
+        if self.energy > cost:
+            self.energy -= cost
+            self.model.grid.move_agent(self, choice)
         else:
-            chosen_move = random.choice(valid_moves)
+            self.energy -= self.s_data["move_cost_land"]
 
-        if chosen_move:
-            dest_hab_name = get_habitat_name(
-                self.model.habitat_map[chosen_move[0], chosen_move[1]])
-            cost = self.s_data["move_cost_water"] if dest_hab_name == "Sea" else self.s_data["move_cost_land"]
-            if self.energy > cost:
-                self.energy -= cost
-                self.model.grid.move_agent(self, chosen_move)
-            else:
-                self.energy -= self.s_data["move_cost_land"]  # Penalty
-        else:
-            self.energy -= self.s_data["move_cost_land"]  # Stayed
-
-        self.current_island_id = self.model.island_map_ids[self.pos[0], self.pos[1]]
-        self.current_habitat_id = self.model.habitat_map[self.pos[0], self.pos[1]]
-
-    def reproduce(self):
-        current_habitat_name = get_habitat_name(
-            self.model.habitat_map[self.pos[0], self.pos[1]])
-        if current_habitat_name == "Sea":
-            return
-
-        repro_bonus = self.s_data["repro_habitat_bonus"].get(
-            current_habitat_name, 1.0)
-        # self.s_data["repro_rate"] is already the per-step (weekly) normalized rate
-        effective_repro_rate = self.s_data["repro_rate"] * repro_bonus
-
-        if self.energy >= self.s_data["min_repro_energy"] and random.random() < effective_repro_rate:
-            self.energy -= self.s_data["repro_energy_cost"]
-            possible_spawn = self.model.grid.get_neighborhood(
-                self.pos, moore=True, include_center=True)
-            valid_land_spawn = [
-                p for p in possible_spawn if self.model.habitat_map[p[0], p[1]] != HABITAT_TYPES["Sea"]]
-            spawn_point = random.choice(
-                valid_land_spawn) if valid_land_spawn else self.pos
-            offspring = BirdAgent(self.model.next_agent_id(
-            ), self.model, self.species_name, spawn_point)
-            self.model.grid.place_agent(offspring, spawn_point)
-            self.model.schedule.add(offspring)
+        self.current_island_id = self.model.island_map_ids[self.pos]
+        self.current_habitat_id = self.model.habitat_map[self.pos]
 
     def gain_energy(self):
-        current_habitat_name = get_habitat_name(
-            self.model.habitat_map[self.pos[0], self.pos[1]])
-        regen_factor = self.s_data["energy_regen_factor"].get(
-            current_habitat_name, 0)
-        base_regen = self.s_data["base_energy_regen_land"] if current_habitat_name != "Sea" else self.s_data.get(
-            "base_energy_regen_sea", 0)
-        self.energy += base_regen * regen_factor
-        self.energy = min(self.energy, self.s_data["max_energy"])
-        self.energy = max(0, self.energy)
+        hname = get_habitat_name(self.model.habitat_map[self.pos])
+        regen = self.s_data["energy_regen_factor"].get(hname, 0)
+        base = (self.s_data["base_energy_regen_land"]
+                if hname != "Sea" else self.s_data.get("base_energy_regen_sea", 0))
+        self.energy = min(self.s_data["max_energy"], self.energy + base*regen)
 
     def check_mortality(self):
         if self.energy <= 0 or self.age > self.s_data["max_age"]:
-            return True  # max_age is in steps
-        current_habitat_name = get_habitat_name(
-            self.model.habitat_map[self.pos[0], self.pos[1]])
-        pref_score = self.s_data["habitat_preference_score"].get(
-            current_habitat_name, 0)
-        mortality_mod = 2.0 if current_habitat_name == "Sea" else (
-            1.5 if pref_score < 3 else 1.0)
-        # self.s_data["mortality_base"] is already the per-step (weekly) normalized rate
-        return random.random() < self.s_data["mortality_base"] * mortality_mod
+            return True
+        hname = get_habitat_name(self.model.habitat_map[self.pos])
+        ps = self.s_data["habitat_preference_score"].get(hname, 0)
+        mod = 2.0 if hname == "Sea" else (1.5 if ps < 3 else 1.0)
+        return random.random() < self.s_data["mortality_base"]*mod
+
+    def reproduce(self):
+        hname = get_habitat_name(self.model.habitat_map[self.pos])
+        if hname == "Sea":
+            return
+        bonus = self.s_data["repro_habitat_bonus"].get(hname, 1.0)
+        if (self.energy >= self.s_data["min_repro_energy"] and
+                random.random() < self.s_data["repro_rate"]*bonus):
+            self.energy -= self.s_data["repro_energy_cost"]
+            nbrs = self.model.grid.get_neighborhood(
+                self.pos, moore=True, include_center=True)
+            land = [p for p in nbrs if self.model.habitat_map[p]
+                    != HABITAT_TYPES["Sea"]]
+            spawn = random.choice(land) if land else self.pos
+            baby = BirdAgent(self.model.next_agent_id(),
+                             self.model, self.species_name, spawn)
+            self.model.grid.place_agent(baby, spawn)
+            self.model.schedule.add(baby)
 
     def step(self):
         self.age += 1
@@ -444,234 +194,180 @@ class BirdAgent(mesa.Agent):
         if self.check_mortality():
             self.model.grid.remove_agent(self)
             self.model.schedule.remove(self)
-            return
-        self.reproduce()
-
-# --- Model Definition ---
+        else:
+            self.reproduce()
 
 
 class GalapagosModel(mesa.Model):
-    def __init__(self, width, height, gis_file, island_name_col,
-                 processed_species_data,  # Expects data processed by helper
-                 initial_pop,
-                 mainland_immigration_rate_per_step,  # Expects per-step rate
-                 mainland_point):
+    """Mesa model; now supports custom per-island population."""
+
+    def __init__(self,
+                 width: int, height: int,
+                 gis_file: str, island_name_col: str,
+                 processed_species_data: Dict[str, Any],
+                 default_init_pop: int,
+                 mainland_immigration_rate_per_step: float,
+                 mainland_point: Tuple[int, int],
+                 initial_pop_distribution: Optional[Dict[str, Dict[int, int]]] = None):
         super().__init__()
         self.width, self.height = width, height
         self.gis_file, self.island_name_col = gis_file, island_name_col
-        self.species_data_processed = processed_species_data  # Store the processed data
-        self.initial_pop_per_species_per_island = initial_pop
+        self.species_data_processed = processed_species_data
+        self.initial_pop_default = default_init_pop
         self.mainland_immigration_rate_per_step = mainland_immigration_rate_per_step
         self.mainland_point = mainland_point
+        self.init_pop_dist = initial_pop_distribution or {}
         self._agent_id_counter = 0
 
         self.grid = mesa.space.MultiGrid(width, height, torus=False)
         self.schedule = mesa.time.RandomActivation(self)
 
         self.island_map_types = np.full((width, height), "sea", dtype=object)
-        self.island_map_ids = np.full((width, height), -1, dtype=int)
+        self.island_map_ids = np.full((width, height), -1,   dtype=int)
         self.habitat_map = np.full(
             (width, height), HABITAT_TYPES["Sea"], dtype=int)
-        self.islands_info = []
+        self.islands_info: list[dict] = []
 
         self._load_and_process_gis()
         self._assign_habitats()
         self._initialize_agents()
         self._setup_datacollector()
+
         self.running = True
         self.datacollector.collect(self)
 
+    # util
     def next_agent_id(self):
         self._agent_id_counter += 1
         return self._agent_id_counter
 
+    # GIS
     def _load_and_process_gis(self):
-        print(f"Loading GIS data from: {self.gis_file}")
         try:
-            full_gdf = gpd.read_file(self.gis_file)
+            full = gpd.read_file(self.gis_file)
         except Exception as e:
-            print(f"ERROR loading GIS: {e}. Continuing without islands.")
+            print(f"[GIS] ERROR reading {self.gis_file}: {e}")
             return
 
-        galapagos_province_name = "Galápagos"
-        province_col = "NAME_1"
-        try:
-            gdf = full_gdf[full_gdf[province_col] == galapagos_province_name]
-            if gdf.empty:
-                print(
-                    f"WARN: Province '{galapagos_province_name}' not found in '{province_col}'. Available: {full_gdf[province_col].unique()}. Using all features.")
-                gdf = full_gdf
-            else:
-                print(f"Filtered for '{galapagos_province_name}'.")
-        except KeyError:
-            print(
-                f"ERROR: Column '{province_col}' not found for province filter. Available: {full_gdf.columns.tolist()}. Using all features.")
-            gdf = full_gdf
-
+        gdf = full[full["NAME_1"] ==
+                   "Galápagos"] if "NAME_1" in full.columns else full
         minx, miny, maxx, maxy = gdf.total_bounds
-        if gdf.empty or not all(np.isfinite([minx, miny, maxx, maxy])):
-            print("ERROR: Invalid GIS bounds. Cannot process islands.")
-            self.x_scale, self.y_scale, self.x_offset, self.y_offset = 1, 1, 0, 0
-            return
-
-        self.x_scale = self.width / (maxx - minx) if (maxx - minx) else 1
-        self.y_scale = self.height / (maxy - miny) if (maxy - miny) else 1
+        self.x_scale = self.width / (maxx-minx) if maxx != minx else 1
+        self.y_scale = self.height/(maxy-miny) if maxy != miny else 1
         self.x_offset, self.y_offset = minx, miny
-        print(
-            f"GIS Bounds: ({minx:.2f}, {miny:.2f}) to ({maxx:.2f}, {maxy:.2f}). Scale: x={self.x_scale:.2f}, y={self.y_scale:.2f}")
 
-        for idx, feat in gdf.iterrows():
-            name, geom = feat.get(self.island_name_col,
-                                  f"Island_{idx}"), feat.geometry
+        for idx, row in gdf.iterrows():
+            geom, name = row.geometry, row.get(
+                self.island_name_col, f"Isl_{idx}")
             cells = []
             for gx in range(self.width):
                 for gy in range(self.height):
-                    ux, uy = (gx + 0.5) / self.x_scale + \
-                        self.x_offset, (gy + 0.5) / \
-                        self.y_scale + self.y_offset
+                    ux = (gx+0.5)/self.x_scale + self.x_offset
+                    uy = (gy+0.5)/self.y_scale + self.y_offset
                     if geom.contains(Point(ux, uy)):
-                        self.island_map_types[gx,
-                                              gy], self.island_map_ids[gx, gy] = "land", idx
+                        self.island_map_types[gx, gy] = "land"
+                        self.island_map_ids[gx, gy] = idx
                         cells.append((gx, gy))
-            if cells:
-                cent_orig = geom.centroid
-                gcx = max(
-                    0, min(self.width - 1, int((cent_orig.x - self.x_offset) * self.x_scale)))
-                gcy = max(0, min(self.height - 1,
-                          int((cent_orig.y - self.y_offset) * self.y_scale)))
-                self.islands_info.append({
-                    "id": idx, "name": name, "geometry_orig": geom, "area_cells": len(cells),
-                    "centroid_grid": (gcx, gcy), "cells_coords": cells, "coastal_cells": []
-                })
-                print(f"Processed: {name} (ID {idx}) with {len(cells)} cells.")
-            else:
-                print(f"WARN: {name} (ID {idx}) resulted in 0 grid cells.")
-        if not self.islands_info:
-            print("CRITICAL WARN: No islands processed from GIS.")
+            if not cells:
+                continue
+            cent = geom.centroid
+            cgx = int((cent.x-self.x_offset)*self.x_scale)
+            cgy = int((cent.y-self.y_offset)*self.y_scale)
+            self.islands_info.append(
+                {"id": idx, "name": name, "geometry_orig": geom,
+                 "area_cells": len(cells), "centroid_grid": (cgx, cgy),
+                 "cells_coords": cells, "coastal_cells": []}
+            )
 
     def _assign_habitats(self):
-        if not self.islands_info:
-            return
-        for r_val in range(self.height):
-            for c_val in range(self.width):
-                if self.island_map_types[c_val, r_val] == "land":
-                    is_coastal = False
-                    for dx_val in [-1, 0, 1]:
-                        for dy_val in [-1, 0, 1]:
-                            if dx_val == 0 and dy_val == 0:
-                                continue
-                            near_sea = False
-                            for depth_val in range(1, COASTAL_ZONE_DEPTH + 1):
-                                ncd, nrd = c_val + dx_val*depth_val, r_val + dy_val*depth_val
-                                if 0 <= ncd < self.grid.width and 0 <= nrd < self.grid.height:
-                                    if self.island_map_types[ncd, nrd] == "sea":
-                                        near_sea = True
-                                        break
-                                else:
-                                    near_sea = True
-                                    break  # Out of bounds is like sea
-                            if near_sea:
-                                is_coastal = True
+        for x in range(self.width):
+            for y in range(self.height):
+                if self.island_map_types[x, y] != "land":
+                    continue
+                # detect coastal
+                coastal = False
+                for dx in (-1, 0, 1):
+                    for dy in (-1, 0, 1):
+                        if dx == dy == 0:
+                            continue
+                        for d in range(1, COASTAL_ZONE_DEPTH+1):
+                            nx, ny = x+dx*d, y+dy*d
+                            if not (0 <= nx < self.width and 0 <= ny < self.height):
+                                coastal = True
                                 break
-                        if is_coastal:
+                            if self.island_map_types[nx, ny] == "sea":
+                                coastal = True
+                                break
+                        if coastal:
                             break
-
-                    if is_coastal:
-                        self.habitat_map[c_val,
-                                         r_val] = HABITAT_TYPES["Coastal"]
-                        isl_idx = self.island_map_ids[c_val, r_val]
-                        for isl in self.islands_info:
-                            if isl["id"] == isl_idx:
-                                isl["coastal_cells"].append((c_val, r_val))
-                                break
-                    else:
-                        isl_idx = self.island_map_ids[c_val, r_val]
-                        curr_isl = next(
-                            (i for i in self.islands_info if i["id"] == isl_idx), None)
-                        if curr_isl and curr_isl["area_cells"] > HIGHLAND_THRESHOLD_AREA:
-                            dist_c = np.sqrt(
-                                (c_val - curr_isl["centroid_grid"][0])**2 + (r_val - curr_isl["centroid_grid"][1])**2)
-                            rad_approx = np.sqrt(
-                                curr_isl["area_cells"] / np.pi)
-                            self.habitat_map[c_val, r_val] = HABITAT_TYPES["Highland"] if dist_c < rad_approx * \
-                                HIGHLAND_CORE_RATIO else HABITAT_TYPES["Scrubland"]
-                        else:
-                            self.habitat_map[c_val,
-                                             r_val] = HABITAT_TYPES["Scrubland"]
+                    if coastal:
+                        break
+                if coastal:
+                    self.habitat_map[x, y] = HABITAT_TYPES["Coastal"]
+                    self._mark_coastal_cell(x, y)
                 else:
-                    self.habitat_map[c_val, r_val] = HABITAT_TYPES["Sea"]
+                    isl_id = self.island_map_ids[x, y]
+                    isl = next(
+                        i for i in self.islands_info if i["id"] == isl_id)
+                    if isl["area_cells"] > HIGHLAND_THRESHOLD_AREA:
+                        dist = np.hypot(
+                            x-isl["centroid_grid"][0], y-isl["centroid_grid"][1])
+                        radius = np.sqrt(isl["area_cells"]/np.pi)
+                        self.habitat_map[x, y] = (HABITAT_TYPES["Highland"]
+                                                  if dist < radius*HIGHLAND_CORE_RATIO else HABITAT_TYPES["Scrubland"])
+                    else:
+                        self.habitat_map[x, y] = HABITAT_TYPES["Scrubland"]
+
+    def _mark_coastal_cell(self, x, y):
+        isl_id = self.island_map_ids[x, y]
+        for isl in self.islands_info:
+            if isl["id"] == isl_id:
+                isl["coastal_cells"].append((x, y))
+                break
 
     def _initialize_agents(self):
-        if not self.islands_info:
-            return
-        for island in self.islands_info:
-            if not island["cells_coords"]:
-                continue
-            spawn_cells = [c for c in island["cells_coords"] if self.habitat_map[c[0], c[1]] in [
-                HABITAT_TYPES["Coastal"], HABITAT_TYPES["Scrubland"]]]
-            if not spawn_cells:
-                spawn_cells = island["cells_coords"]
-            if not spawn_cells:
-                continue
-
-            for species_name in self.species_data_processed.keys():  # Use processed data keys
-                for _ in range(self.initial_pop_per_species_per_island):
-                    pos = random.choice(spawn_cells)
-                    agent = BirdAgent(self.next_agent_id(),
-                                      self, species_name, pos)
-                    self.grid.place_agent(agent, pos)
-                    self.schedule.add(agent)
+        for isl in self.islands_info:
+            land_cells = [c for c in isl["cells_coords"]
+                          if self.habitat_map[c] != HABITAT_TYPES["Sea"]]
+            for sp in self.species_data_processed:
+                n = self.init_pop_dist.get(sp, {}).get(
+                    isl["id"], self.initial_pop_default)
+                for _ in range(n):
+                    pos = random.choice(land_cells)
+                    a = BirdAgent(self.next_agent_id(), self, sp, pos)
+                    self.grid.place_agent(a, pos)
+                    self.schedule.add(a)
 
     def _setup_datacollector(self):
-        model_reporters = {
-            "TotalAgents": lambda m: m.schedule.get_agent_count()}
-        for s_name in self.species_data_processed.keys():  # Use processed data keys
-            model_reporters[f"{s_name}_total"] = lambda m, s=s_name: sum(
-                1 for a in m.schedule.agents if isinstance(a, BirdAgent) and a.species_name == s)
-        if self.islands_info:
-            for i_info in self.islands_info:
-                i_id, i_name = i_info["id"], i_info["name"].replace(" ", "_")
-                model_reporters[f"Richness_{i_name}"] = lambda m, id_val=i_id: len(set(a.species_name for a in m.schedule.agents if isinstance(
-                    a, BirdAgent) and hasattr(a, 'current_island_id') and a.current_island_id == id_val))
-                for s_name in self.species_data_processed.keys():
-                    model_reporters[f"Pop_{i_name}_{s_name}"] = lambda m, id_val=i_id, sn=s_name: sum(1 for a in m.schedule.agents if isinstance(
-                        a, BirdAgent) and hasattr(a, 'current_island_id') and a.current_island_id == id_val and a.species_name == sn)
-        else:
-            print("WARN: No islands, limited data collection.")
-        self.datacollector = mesa.DataCollector(
-            model_reporters=model_reporters)
+        reporters = {"TotalAgents": lambda m: m.schedule.get_agent_count()}
+        for sp in self.species_data_processed:
+            reporters[f"{sp}_total"] = lambda m, s=sp: sum(
+                1 for a in m.schedule.agents if a.species_name == s)
+        for isl in self.islands_info:
+            rid = isl["id"]
+            tag = isl["name"].replace(" ", "_")
+            reporters[f"Richness_{tag}"] = lambda m, rid=rid: len({a.species_name for a in m.schedule.agents
+                                                                  if getattr(a, "current_island_id", -99) == rid})
+        self.datacollector = mesa.DataCollector(model_reporters=reporters)
 
     def apply_mainland_immigration(self):
-        if not self.islands_info:
-            return
-        for island in self.islands_info:
-            target_cells = island.get(
-                "coastal_cells", []) or island.get("cells_coords", [])
-            if not target_cells:
+        for isl in self.islands_info:
+            cells = isl["coastal_cells"] or isl["cells_coords"]
+            if not cells:
                 continue
-            for species_name in self.species_data_processed.keys():
-                # self.mainland_immigration_rate_per_step is already per-step
-                effective_rate = self.mainland_immigration_rate_per_step * \
-                    (len(target_cells) / 50.0)  # Size factor
-                if random.random() < effective_rate:
-                    pos = random.choice(target_cells)
-                    immigrant = BirdAgent(
-                        self.next_agent_id(), self, species_name, pos)
-                    self.grid.place_agent(immigrant, pos)
-                    self.schedule.add(immigrant)
+            factor = len(cells)/50.0
+            for sp in self.species_data_processed:
+                if random.random() < self.mainland_immigration_rate_per_step*factor:
+                    pos = random.choice(cells)
+                    a = BirdAgent(self.next_agent_id(), self, sp, pos)
+                    self.grid.place_agent(a, pos)
+                    self.schedule.add(a)
 
     def step(self):
-        if self.schedule.get_agent_count() > 0:
+        if self.schedule.get_agent_count():
             self.apply_mainland_immigration()
             self.schedule.step()
-        else:
-            print(f"Step {self.schedule.steps}: No agents.")
         self.datacollector.collect(self)
-        if self.schedule.steps % 50 == 0:
-            print(
-                f"--- Step {self.schedule.steps} (Week) --- Agents: {self.schedule.get_agent_count()} ---")
-
-# --- Validation and Plotting Functions (mostly unchanged, check labels) ---
 
 
 def plot_species_area_relationship(model_data_df, islands_info_list):
@@ -814,88 +510,52 @@ def plot_final_distribution(model):
     plt.show()
 
 
-# --- Simulation Run & Visualization ---
-if __name__ == "__main__":
-    print("Starting Galapagos ABM Simulation...")
-    print(
-        f"Simulation configured for {STEPS_PER_YEAR} steps (weeks) per year.")
-    print(
-        f"Total simulation duration: {SIMULATION_STEPS} weeks (approx. {SIMULATION_STEPS/STEPS_PER_YEAR:.2f} years).")
+def run_simulation(settings: Dict[str, Any],
+                   species_dict: Dict[str, Any],
+                   initial_pop_distribution: Optional[Dict[str, Dict[int, int]]] = None):
+    """Utility for scripts / UI."""
+    settings = {**DEFAULTS, **settings}
+    steps_per_year = settings["STEPS_PER_YEAR"]
+    sim_steps = steps_per_year*settings["SIM_YEARS"]
 
-    # Normalize annual data to per-step data for the simulation
-    processed_species_data_for_model, mainland_immigration_rate_for_model = normalize_simulation_data(
-        SPECIES_DATA_ANNUAL,
-        ANNUAL_MAINLAND_IMMIGRATION_RATE,
-        STEPS_PER_YEAR
+    proc_sp, imm_per_step = normalize_simulation_data(
+        species_dict,
+        settings["ANNUAL_MAINLAND_IMMIGRATION_RATE"],
+        steps_per_year
+    )
+    mainland_pt = (settings["GRID_WIDTH"]+20, settings["GRID_HEIGHT"]//2)
+
+    model = GalapagosModel(
+        width=settings["GRID_WIDTH"],
+        height=settings["GRID_HEIGHT"],
+        gis_file=GALAPAGOS_GIS_FILE,
+        island_name_col=ISLAND_NAME_COLUMN_IN_GIS,
+        processed_species_data=proc_sp,
+        default_init_pop=settings["INITIAL_POP_DEFAULT"],
+        mainland_immigration_rate_per_step=imm_per_step,
+        mainland_point=mainland_pt,
+        initial_pop_distribution=initial_pop_distribution
     )
 
-    print(
-        f"Per-step mainland immigration rate: {mainland_immigration_rate_for_model:.6f}")
-    # Example: print processed data for one species to verify
-    # print("Processed GroundFinch data for model:", processed_species_data_for_model["GroundFinch"])
-
-    model_instance = GalapagosModel(
-        GRID_WIDTH, GRID_HEIGHT,
-        GALAPAGOS_GIS_FILE, ISLAND_NAME_COLUMN_IN_GIS,
-        processed_species_data_for_model,  # Pass the processed data
-        INITIAL_POP_PER_SPECIES_PER_ISLAND,
-        mainland_immigration_rate_for_model,  # Pass the processed rate
-        MAINLAND_POINT
-    )
-
-    if not model_instance.islands_info:
-        print("CRITICAL: No islands loaded. Check GIS path/content.")
-    else:
-        print(
-            f"Model initialized with {len(model_instance.islands_info)} islands.")
-
-    for i in range(SIMULATION_STEPS):
-        model_instance.step()
-        if model_instance.schedule.get_agent_count() == 0 and i > 20:
-            print(f"Stopping early at week {i+1}: all agents perished.")
+    for _ in range(sim_steps):
+        model.step()
+        if model.schedule.get_agent_count() == 0:
             break
 
-    print("\nSimulation finished.")
-    model_run_data = model_instance.datacollector.get_model_vars_dataframe()
-    print("\n--- Simulation Results (Last 5 steps) ---")
-    print(model_run_data.tail())
+    df = model.datacollector.get_model_vars_dataframe()
+    return model, df
 
-    plt.figure(figsize=(12, 6))
-    # Use processed_species_data_for_model to iterate for consistency if SPECIES_DATA_ANNUAL was changed
-    for s_name in processed_species_data_for_model.keys():
-        col = f"{s_name}_total"
-        if col in model_run_data.columns:
-            plt.plot(model_run_data.index,
-                     model_run_data[col], label=f"{s_name} Total Pop")
-    plt.xlabel("Step (Week)")
-    plt.ylabel("Total Population")
-    plt.title("Overall Species Populations Over Time")
+
+if __name__ == "__main__":
+    print("Running with defaults …")
+    m, df = run_simulation(DEFAULTS, SPECIES_DATA_ANNUAL)
+    print(df.tail())
+    from matplotlib import pyplot as plt
+    for sp in SPECIES_DATA_ANNUAL:
+        col = f"{sp}_total"
+        if col in df.columns:
+            plt.plot(df.index, df[col], label=sp)
     plt.legend()
-    plt.grid(True, ls=':', alpha=0.7)
-    plt.tight_layout()
+    plt.xlabel("week")
+    plt.ylabel("pop")
     plt.show()
-
-    if model_instance.islands_info:
-        plt.figure(figsize=(12, 6))
-        for isl in model_instance.islands_info:
-            col = f"Richness_{isl['name'].replace(' ', '_')}"
-            if col in model_run_data.columns:
-                plt.plot(model_run_data.index,
-                         model_run_data[col], label=f"{isl['name']} Richness")
-        plt.xlabel("Step (Week)")
-        plt.ylabel("Species Richness")
-        plt.title("Island Species Richness Over Time")
-        plt.legend(fontsize='small', ncol=2)
-        plt.grid(True, ls=':', alpha=0.7)
-        plt.tight_layout()
-        plt.show()
-
-    if model_instance.islands_info and not model_run_data.empty:
-        plot_species_area_relationship(
-            model_run_data, model_instance.islands_info)
-        plot_species_isolation_relationship(
-            model_run_data, model_instance.islands_info, MAINLAND_POINT)
-    else:
-        print("Skipping SAR/SIR plots: no island data or model run data.")
-
-    plot_final_distribution(model_instance)
