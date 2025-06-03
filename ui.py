@@ -38,7 +38,7 @@ with st.sidebar:
     init_default = {}
     for sp in species_dict:
         init_default[sp] = st.number_input(
-            f"{sp}", 0, 50, DEFAULTS["INITIAL_POP_DEFAULT"])
+            f"{sp}", 0, 50000, DEFAULTS["INITIAL_POP_DEFAULT"])
 
     st.subheader("Include / exclude species")
     enabled = {sp: st.checkbox(sp, True) for sp in species_dict}

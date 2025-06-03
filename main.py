@@ -12,11 +12,11 @@ import mesa
 
 
 DEFAULTS: Dict[str, Any] = {
-    "GRID_WIDTH": 1000,
-    "GRID_HEIGHT": 1000,
+    "GRID_WIDTH": 300,
+    "GRID_HEIGHT": 300,
     "STEPS_PER_YEAR": 52,
     "SIM_YEARS": 3,
-    "INITIAL_POP_DEFAULT": 300,
+    "INITIAL_POP_DEFAULT": 50,
     "ANNUAL_MAINLAND_IMMIGRATION_RATE": 0.005,
 }
 
@@ -537,7 +537,8 @@ def run_simulation(settings: Dict[str, Any],
         initial_pop_distribution=initial_pop_distribution
     )
 
-    for _ in range(sim_steps):
+    for i in range(sim_steps):
+        print(f"Running Step-{i}")
         model.step()
         if model.schedule.get_agent_count() == 0:
             break

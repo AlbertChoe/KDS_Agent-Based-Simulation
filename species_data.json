@@ -24,7 +24,7 @@
     "repro_energy_cost": 45,
     "min_repro_energy": 70,
     "repro_habitat_bonus": {
-      "Coastal": 0,
+      "Coastal": 0.23,
       "Scrubland": 0,
       "Highland": 0
     }
@@ -54,7 +54,7 @@
     "repro_energy_cost": 50,
     "min_repro_energy": 80,
     "repro_habitat_bonus": {
-      "Coastal": 0,
+      "Coastal": 0.4,
       "Scrubland": 0,
       "Highland": 0
     }
@@ -84,7 +84,7 @@
     "repro_energy_cost": 55,
     "min_repro_energy": 85,
     "repro_habitat_bonus": {
-      "Coastal": 0,
+      "Coastal": 0.15,
       "Scrubland": 0,
       "Highland": 0
     }
@@ -114,7 +114,7 @@
     "repro_energy_cost": 70,
     "min_repro_energy": 100,
     "repro_habitat_bonus": {
-      "Coastal": 0,
+      "Coastal": 0.2,
       "Scrubland": 0,
       "Highland": 0
     }
@@ -145,7 +145,7 @@
     "min_repro_energy": 90,
     "repro_habitat_bonus": {
       "Coastal": 0,
-      "Scrubland": 0,
+      "Scrubland": 0.3,
       "Highland": 0
     }
   },
@@ -159,7 +159,7 @@
     "sensing_range": 10,
     "energy_regen_factor": {
       "Coastal": 0.5,
-      "Scrubland": 0.4,
+      "Scrubland": 1.4,
       "Highland": 0.1,
       "Sea": 0.0
     },
@@ -172,10 +172,10 @@
     "move_cost_land": 3,
     "move_cost_water": 25,
     "repro_energy_cost": 40,
-    "min_repro_energy": 60,
+    "min_repro_energy": 40,
     "repro_habitat_bonus": {
       "Coastal": 0,
-      "Scrubland": 0,
+      "Scrubland": 0.5,
       "Highland": 0
     }
   }
