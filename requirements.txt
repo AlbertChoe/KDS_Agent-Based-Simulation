@@ -2,3 +2,4 @@ mesa==2.1
 geopandas==1.1.0
 numpy==2.2.5
 matplotlib==3.10.0
+streamlit==1.45.1
