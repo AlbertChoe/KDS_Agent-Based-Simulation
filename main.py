@@ -608,6 +608,7 @@ def run_simulation(settings: Dict[str, Any],
     )
 
     for i in range(sim_steps):
+        print(f"Step-{i}")
         model.step()
         if model.schedule.get_agent_count() == 0:
             break

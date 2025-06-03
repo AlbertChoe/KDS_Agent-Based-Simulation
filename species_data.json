@@ -89,36 +89,6 @@
       "Highland": 0
     }
   },
-  "WavedAlbatross": {
-    "annual_repro_rate": 0.5,
-    "annual_mortality_base": 0.075,
-    "max_age_years": 20,
-    "max_energy": 160,
-    "initial_energy_range": [90, 140],
-    "dispersal_skill": 0.95,
-    "sensing_range": 35,
-    "energy_regen_factor": {
-      "Coastal": 1.4,
-      "Scrubland": 0.5,
-      "Highland": 0.2,
-      "Sea": 1.0
-    },
-    "base_energy_regen_land": 6,
-    "habitat_preference_score": {
-      "Coastal": 8,
-      "Scrubland": 3,
-      "Highland": 1
-    },
-    "move_cost_land": 6,
-    "move_cost_water": 4,
-    "repro_energy_cost": 70,
-    "min_repro_energy": 100,
-    "repro_habitat_bonus": {
-      "Coastal": 0.2,
-      "Scrubland": 0,
-      "Highland": 0
-    }
-  },
   "GalapagosHawk": {
     "annual_repro_rate": 0.5,
     "annual_mortality_base": 0.12,
