@@ -25,8 +25,14 @@ with st.sidebar:
     steps_y = st.number_input("Steps / year", 4, 365,
                               DEFAULTS["STEPS_PER_YEAR"])
     sim_yrs = st.slider("Simulation years", 1, 20, DEFAULTS["SIM_YEARS"])
-    immig = st.number_input("Annual mainland immigration", 0.0, 0.1,
-                            DEFAULTS["ANNUAL_MAINLAND_IMMIGRATION_RATE"], 0.001)
+    immig = st.number_input(
+        "Annual mainland immigration",
+        0.0,
+        0.1,
+        DEFAULTS["ANNUAL_MAINLAND_IMMIGRATION_RATE"],
+        0.001,
+        format="%.3f",
+    )
 
     st.subheader("Initial population (default)")
     init_default = {}
