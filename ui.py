@@ -67,18 +67,30 @@ with st.sidebar:
 
 
 if run_btn:
+
+    if not per_island:
+        from main import GalapagosModel, normalize_simulation_data, GALAPAGOS_GIS_FILE, ISLAND_NAME_COLUMN_IN_GIS
+        tiny_proc, _ = normalize_simulation_data(species_dict, immig, steps_y)
+        tiny = GalapagosModel(200, 200, GALAPAGOS_GIS_FILE, ISLAND_NAME_COLUMN_IN_GIS,
+                              tiny_proc, 0, 0.0, (0, 0))
+        isl_ids = [isl["id"] for isl in tiny.islands_info]
+
+        per_island = {
+            sp: {iid: init_default[sp] for iid in isl_ids}
+            for sp in species_dict
+        }
+
     with st.spinner("Running …"):
         settings = dict(
             GRID_WIDTH=grid_w,
             GRID_HEIGHT=grid_h,
             STEPS_PER_YEAR=steps_y,
             SIM_YEARS=sim_yrs,
-            INITIAL_POP_DEFAULT=max(init_default.values()),
+            INITIAL_POP_DEFAULT=0,
             ANNUAL_MAINLAND_IMMIGRATION_RATE=immig,
         )
-        # keep only enabled species
         sp_filtered = {k: v for k, v in species_dict.items()
-                       if enabled.get(k, False)}
+                       if enabled.get(k, True)}
         model, df = run_simulation(settings, sp_filtered, per_island)
 
     st.success("Done!")
