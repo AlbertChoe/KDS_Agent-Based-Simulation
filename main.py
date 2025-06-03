@@ -98,7 +98,7 @@ class BirdAgent(mesa.Agent):
             score = self.s_data["habitat_preference_score"].get(hname, 0)
 
             if hname == "Sea" and getattr(self, "target_island_direction", None):
-                dx, dy = mv[0]-self.pos[0], mv[1]-self.pos[1]
+                dx, dy = mv[0] - self.pos[0], mv[1] - self.pos[1]
                 if (dx * self.target_island_direction[0] +
                         dy * self.target_island_direction[1]) > 0:
                     score += 2
@@ -113,21 +113,21 @@ class BirdAgent(mesa.Agent):
             return
         best = (float("inf"), None)
         for _ in range(8):
-            angle = random.uniform(0, 2*np.pi)
+            angle = random.uniform(0, 2 * np.pi)
             for r in range(1, int(self.s_data["sensing_range"])):
-                cx = int(self.pos[0] + r*np.cos(angle))
-                cy = int(self.pos[1] + r*np.sin(angle))
+                cx = int(self.pos[0] + r * np.cos(angle))
+                cy = int(self.pos[1] + r * np.sin(angle))
                 if not (0 <= cx < self.model.grid.width and 0 <= cy < self.model.grid.height):
                     break
                 if self.model.island_map_types[cx, cy] == "land":
-                    dist = np.hypot(cx-self.pos[0], cy-self.pos[1])
+                    dist = np.hypot(cx - self.pos[0], cy - self.pos[1])
                     if dist < best[0]:
                         best = (dist, (cx, cy))
                     break
         if best[1]:
-            dx, dy = best[1][0]-self.pos[0], best[1][1]-self.pos[1]
+            dx, dy = best[1][0] - self.pos[0], best[1][1] - self.pos[1]
             norm = np.hypot(dx, dy)
-            self.target_island_direction = (dx/norm, dy/norm)
+            self.target_island_direction = (dx / norm, dy / norm)
 
     def move(self):
         current_name = get_habitat_name(self.model.habitat_map[self.pos])
@@ -143,7 +143,8 @@ class BirdAgent(mesa.Agent):
         choice = random.choice(pref) if not pref else pref[0]
 
         dest_name = get_habitat_name(self.model.habitat_map[choice])
-        cost = self.s_data["move_cost_water"] if dest_name == "Sea" else self.s_data["move_cost_land"]
+        cost = (self.s_data["move_cost_water"]
+                if dest_name == "Sea" else self.s_data["move_cost_land"])
 
         if self.energy > cost:
             self.energy -= cost
@@ -159,7 +160,8 @@ class BirdAgent(mesa.Agent):
         regen = self.s_data["energy_regen_factor"].get(hname, 0)
         base = (self.s_data["base_energy_regen_land"]
                 if hname != "Sea" else self.s_data.get("base_energy_regen_sea", 0))
-        self.energy = min(self.s_data["max_energy"], self.energy + base*regen)
+        self.energy = min(self.s_data["max_energy"],
+                          self.energy + base * regen)
 
     def check_mortality(self):
         if self.energy <= 0 or self.age > self.s_data["max_age"]:
@@ -167,7 +169,7 @@ class BirdAgent(mesa.Agent):
         hname = get_habitat_name(self.model.habitat_map[self.pos])
         ps = self.s_data["habitat_preference_score"].get(hname, 0)
         mod = 2.0 if hname == "Sea" else (1.5 if ps < 3 else 1.0)
-        return random.random() < self.s_data["mortality_base"]*mod
+        return random.random() < self.s_data["mortality_base"] * mod
 
     def reproduce(self):
         hname = get_habitat_name(self.model.habitat_map[self.pos])
@@ -175,7 +177,7 @@ class BirdAgent(mesa.Agent):
             return
         bonus = self.s_data["repro_habitat_bonus"].get(hname, 1.0)
         if (self.energy >= self.s_data["min_repro_energy"] and
-                random.random() < self.s_data["repro_rate"]*bonus):
+                random.random() < self.s_data["repro_rate"] * bonus):
             self.energy -= self.s_data["repro_energy_cost"]
             nbrs = self.model.grid.get_neighborhood(
                 self.pos, moore=True, include_center=True)
@@ -223,7 +225,7 @@ class GalapagosModel(mesa.Model):
         self.schedule = mesa.time.RandomActivation(self)
 
         self.island_map_types = np.full((width, height), "sea", dtype=object)
-        self.island_map_ids = np.full((width, height), -1,   dtype=int)
+        self.island_map_ids = np.full((width, height), -1, dtype=int)
         self.habitat_map = np.full(
             (width, height), HABITAT_TYPES["Sea"], dtype=int)
         self.islands_info: list[dict] = []
@@ -252,8 +254,8 @@ class GalapagosModel(mesa.Model):
         gdf = full[full["NAME_1"] ==
                    "Galápagos"] if "NAME_1" in full.columns else full
         minx, miny, maxx, maxy = gdf.total_bounds
-        self.x_scale = self.width / (maxx-minx) if maxx != minx else 1
-        self.y_scale = self.height/(maxy-miny) if maxy != miny else 1
+        self.x_scale = self.width / (maxx - minx) if maxx != minx else 1
+        self.y_scale = self.height / (maxy - miny) if maxy != miny else 1
         self.x_offset, self.y_offset = minx, miny
 
         for idx, row in gdf.iterrows():
@@ -262,8 +264,8 @@ class GalapagosModel(mesa.Model):
             cells = []
             for gx in range(self.width):
                 for gy in range(self.height):
-                    ux = (gx+0.5)/self.x_scale + self.x_offset
-                    uy = (gy+0.5)/self.y_scale + self.y_offset
+                    ux = (gx + 0.5) / self.x_scale + self.x_offset
+                    uy = (gy + 0.5) / self.y_scale + self.y_offset
                     if geom.contains(Point(ux, uy)):
                         self.island_map_types[gx, gy] = "land"
                         self.island_map_ids[gx, gy] = idx
@@ -271,8 +273,8 @@ class GalapagosModel(mesa.Model):
             if not cells:
                 continue
             cent = geom.centroid
-            cgx = int((cent.x-self.x_offset)*self.x_scale)
-            cgy = int((cent.y-self.y_offset)*self.y_scale)
+            cgx = int((cent.x - self.x_offset) * self.x_scale)
+            cgy = int((cent.y - self.y_offset) * self.y_scale)
             self.islands_info.append(
                 {"id": idx, "name": name, "geometry_orig": geom,
                  "area_cells": len(cells), "centroid_grid": (cgx, cgy),
@@ -290,8 +292,8 @@ class GalapagosModel(mesa.Model):
                     for dy in (-1, 0, 1):
                         if dx == dy == 0:
                             continue
-                        for d in range(1, COASTAL_ZONE_DEPTH+1):
-                            nx, ny = x+dx*d, y+dy*d
+                        for d in range(1, COASTAL_ZONE_DEPTH + 1):
+                            nx, ny = x + dx * d, y + dy * d
                             if not (0 <= nx < self.width and 0 <= ny < self.height):
                                 coastal = True
                                 break
@@ -311,10 +313,15 @@ class GalapagosModel(mesa.Model):
                         i for i in self.islands_info if i["id"] == isl_id)
                     if isl["area_cells"] > HIGHLAND_THRESHOLD_AREA:
                         dist = np.hypot(
-                            x-isl["centroid_grid"][0], y-isl["centroid_grid"][1])
-                        radius = np.sqrt(isl["area_cells"]/np.pi)
-                        self.habitat_map[x, y] = (HABITAT_TYPES["Highland"]
-                                                  if dist < radius*HIGHLAND_CORE_RATIO else HABITAT_TYPES["Scrubland"])
+                            x - isl["centroid_grid"][0], y -
+                            isl["centroid_grid"][1]
+                        )
+                        radius = np.sqrt(isl["area_cells"] / np.pi)
+                        self.habitat_map[x, y] = (
+                            HABITAT_TYPES["Highland"]
+                            if dist < radius * HIGHLAND_CORE_RATIO
+                            else HABITAT_TYPES["Scrubland"]
+                        )
                     else:
                         self.habitat_map[x, y] = HABITAT_TYPES["Scrubland"]
 
@@ -327,11 +334,14 @@ class GalapagosModel(mesa.Model):
 
     def _initialize_agents(self):
         for isl in self.islands_info:
-            land_cells = [c for c in isl["cells_coords"]
-                          if self.habitat_map[c] != HABITAT_TYPES["Sea"]]
+            land_cells = [
+                c for c in isl["cells_coords"]
+                if self.habitat_map[c] != HABITAT_TYPES["Sea"]
+            ]
             for sp in self.species_data_processed:
                 n = self.init_pop_dist.get(sp, {}).get(
-                    isl["id"], self.initial_pop_default)
+                    isl["id"], self.initial_pop_default
+                )
                 for _ in range(n):
                     pos = random.choice(land_cells)
                     a = BirdAgent(self.next_agent_id(), self, sp, pos)
@@ -339,15 +349,46 @@ class GalapagosModel(mesa.Model):
                     self.schedule.add(a)
 
     def _setup_datacollector(self):
-        reporters = {"TotalAgents": lambda m: m.schedule.get_agent_count()}
+        """
+        Collect at each step:
+          - "TotalAgents"
+          - "<Species>_total" for each species
+          - "Richness_<IslandName>" for each island
+          - "Pop_<IslandName>_<Species>" for each island×species
+        """
+        reporters: dict[str, callable] = {
+            "TotalAgents": lambda m: m.schedule.get_agent_count()
+        }
+
+        # 1) Total count per species
         for sp in self.species_data_processed:
             reporters[f"{sp}_total"] = lambda m, s=sp: sum(
-                1 for a in m.schedule.agents if a.species_name == s)
+                1 for a in m.schedule.agents if a.species_name == s
+            )
+
+        # 2) For each island: richness & per‐species pop
         for isl in self.islands_info:
             rid = isl["id"]
             tag = isl["name"].replace(" ", "_")
-            reporters[f"Richness_{tag}"] = lambda m, rid=rid: len({a.species_name for a in m.schedule.agents
-                                                                  if getattr(a, "current_island_id", -99) == rid})
+
+            # a) Richness_<IslandTag>
+            reporters[f"Richness_{tag}"] = lambda m, rid=rid: len(
+                {
+                    a.species_name
+                    for a in m.schedule.agents
+                    if getattr(a, "current_island_id", -99) == rid
+                }
+            )
+
+            # b) Pop_<IslandTag>_<Species>
+            for sp in self.species_data_processed:
+                reporters[f"Pop_{tag}_{sp}"] = lambda m, rid=rid, s=sp: sum(
+                    1
+                    for a in m.schedule.agents
+                    if a.species_name == s
+                    and getattr(a, "current_island_id", -99) == rid
+                )
+
         self.datacollector = mesa.DataCollector(model_reporters=reporters)
 
     def apply_mainland_immigration(self):
@@ -355,9 +396,9 @@ class GalapagosModel(mesa.Model):
             cells = isl["coastal_cells"] or isl["cells_coords"]
             if not cells:
                 continue
-            factor = len(cells)/50.0
+            factor = len(cells) / 50.0
             for sp in self.species_data_processed:
-                if random.random() < self.mainland_immigration_rate_per_step*factor:
+                if random.random() < self.mainland_immigration_rate_per_step * factor:
                     pos = random.choice(cells)
                     a = BirdAgent(self.next_agent_id(), self, sp, pos)
                     self.grid.place_agent(a, pos)
@@ -388,22 +429,31 @@ def plot_species_area_relationship(model_data_df, islands_info_list):
         print("SAR: Not enough data.")
         return
     plt.figure(figsize=(10, 6))
-    plt.scatter(areas, richness, color='blue')
+    plt.scatter(areas, richness, color="blue")
     for i, name in enumerate(names):
-        plt.annotate(name, (areas[i], richness[i]), textcoords="offset points", xytext=(
-            0, 5), ha='center', fontsize=8)
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlabel("Island Area (Cells) - Log")
+        plt.annotate(
+            name,
+            (areas[i], richness[i]),
+            textcoords="offset points",
+            xytext=(0, 5),
+            ha="center",
+            fontsize=8,
+        )
+    plt.xscale("log")
+    plt.yscale("log")
+    plt.xlabel("Island Area (Cells) – Log")
     plt.ylabel(
-        f"Species Richness (Avg. Last {min(50,len(model_data_df))} Weeks) - Log")
+        f"Species Richness (Avg. Last {min(50, len(model_data_df))} Weeks) – Log"
+    )
     plt.title("Species-Area Relationship (SAR)")
     plt.grid(True, which="both", ls="--", alpha=0.5)
     plt.tight_layout()
     plt.show()
 
 
-def plot_species_isolation_relationship(model_data_df, islands_info_list, mainland_point):
+def plot_species_isolation_relationship(
+    model_data_df, islands_info_list, mainland_point
+):
     if not islands_info_list:
         print("SIR: No island info.")
         return
@@ -412,8 +462,10 @@ def plot_species_isolation_relationship(model_data_df, islands_info_list, mainla
         col = f"Richness_{isl['name'].replace(' ', '_')}"
         if col in model_data_df.columns:
             avg_r = model_data_df[col].tail(min(50, len(model_data_df))).mean()
-            dist = np.sqrt((isl["centroid_grid"][0]-mainland_point[0])
-                           ** 2 + (isl["centroid_grid"][1]-mainland_point[1])**2)
+            dist = np.sqrt(
+                (isl["centroid_grid"][0] - mainland_point[0]) ** 2
+                + (isl["centroid_grid"][1] - mainland_point[1]) ** 2
+            )
             richness.append(avg_r)
             distances.append(dist)
             names.append(isl["name"])
@@ -423,13 +475,20 @@ def plot_species_isolation_relationship(model_data_df, islands_info_list, mainla
         print("SIR: Not enough data.")
         return
     plt.figure(figsize=(10, 6))
-    plt.scatter(distances, richness, color='green')
+    plt.scatter(distances, richness, color="green")
     for i, name in enumerate(names):
-        plt.annotate(name, (distances[i], richness[i]), textcoords="offset points", xytext=(
-            0, 5), ha='center', fontsize=8)
+        plt.annotate(
+            name,
+            (distances[i], richness[i]),
+            textcoords="offset points",
+            xytext=(0, 5),
+            ha="center",
+            fontsize=8,
+        )
     plt.xlabel("Isolation (Distance to Mainland Point)")
     plt.ylabel(
-        f"Species Richness (Avg. Last {min(50,len(model_data_df))} Weeks)")
+        f"Species Richness (Avg. Last {min(50, len(model_data_df))} Weeks)"
+    )
     plt.title("Species-Isolation Relationship (SIR)")
     plt.grid(True, ls="--", alpha=0.5)
     plt.tight_layout()
@@ -437,13 +496,14 @@ def plot_species_isolation_relationship(model_data_df, islands_info_list, mainla
 
 
 def plot_final_distribution(model):
-    plt.figure(figsize=(12, 12 * (model.height /
-               model.width if model.width else 1)))
+    plt.figure(
+        figsize=(12, 12 * (model.height / model.width if model.width else 1))
+    )
     colors = {
         HABITAT_TYPES["Sea"]: [0.7, 0.85, 1.0],
         HABITAT_TYPES["Coastal"]: [0.9, 0.85, 0.7],
         HABITAT_TYPES["Scrubland"]: [0.6, 0.8, 0.6],
-        HABITAT_TYPES["Highland"]: [0.4, 0.6, 0.4]
+        HABITAT_TYPES["Highland"]: [0.4, 0.6, 0.4],
     }
     rgb_map = np.zeros((model.height, model.width, 3))
     for r in range(model.height):
@@ -452,23 +512,27 @@ def plot_final_distribution(model):
     plt.imshow(rgb_map, origin="lower", extent=[
                0, model.width, 0, model.height])
 
-    species_set = {agent.species_name for agent in model.schedule.agents if isinstance(
-        agent, BirdAgent)}
+    species_set = {
+        agent.species_name
+        for agent in model.schedule.agents
+        if isinstance(agent, BirdAgent)
+    }
     species_list = sorted(species_set)
 
     if not species_list:
         plt.title(
-            f"Agent Distribution at Step {model.schedule.steps} (tidak ada agen)")
+            f"Agent Distribution at Step {model.schedule.steps} (tidak ada agen)"
+        )
         plt.xlabel("X")
         plt.ylabel("Y")
-        plt.grid(True, ls=':', alpha=0.2)
+        plt.grid(True, ls=":", alpha=0.2)
         plt.xlim(0, model.width)
         plt.ylim(0, model.height)
         plt.tight_layout()
         plt.show()
         return
 
-    palette = plt.colormaps['tab10'].resampled(len(species_list))
+    palette = plt.colormaps["tab10"].resampled(len(species_list))
     s_colors = {sp: palette(i) for i, sp in enumerate(species_list)}
 
     ax, ay, ac = [], [], []
@@ -478,32 +542,38 @@ def plot_final_distribution(model):
             ay.append(agent.pos[1] + 0.5)
             ac.append(s_colors.get(agent.species_name, "black"))
     if ax:
-        plt.scatter(ax, ay, c=ac, s=10, marker="o", alpha=0.7,
-                    edgecolor='gray', linewidth=0.3)
+        plt.scatter(
+            ax, ay, c=ac, s=10, marker="o", alpha=0.7,
+            edgecolor="gray", linewidth=0.3
+        )
 
     handles = []
     labels = []
     for sp, col in s_colors.items():
-        handles.append(plt.Line2D([0], [0], marker='o', color='w',
-                                  markerfacecolor=col, markersize=6, alpha=0.7,
-                                  markeredgecolor='gray', markeredgewidth=0.3))
+        handles.append(
+            plt.Line2D(
+                [0], [0], marker="o", color="w",
+                markerfacecolor=col, markersize=6, alpha=0.7,
+                markeredgecolor="gray", markeredgewidth=0.3
+            )
+        )
         labels.append(sp)
     plt.legend(handles, labels, title="Species", loc="upper right", fontsize=8)
 
-    if hasattr(model, 'islands_info'):
+    if hasattr(model, "islands_info"):
         for isl in model.islands_info:
             if isl["area_cells"] > 0:
                 plt.text(
                     isl["centroid_grid"][0], isl["centroid_grid"][1], isl["name"],
-                    ha='center', va='center', color='black', fontsize=7,
-                    bbox=dict(facecolor='white', alpha=0.5, pad=0.2,
-                              boxstyle='round,pad=0.1')
+                    ha="center", va="center", color="black", fontsize=7,
+                    bbox=dict(facecolor="white", alpha=0.5, pad=0.2,
+                              boxstyle="round,pad=0.1")
                 )
 
     plt.title(f"Agent Distribution at Step {model.schedule.steps}")
     plt.xlabel("X")
     plt.ylabel("Y")
-    plt.grid(True, ls=':', alpha=0.2)
+    plt.grid(True, ls=":", alpha=0.2)
     plt.xlim(0, model.width)
     plt.ylim(0, model.height)
     plt.tight_layout()
@@ -516,14 +586,14 @@ def run_simulation(settings: Dict[str, Any],
     """Utility for scripts / UI."""
     settings = {**DEFAULTS, **settings}
     steps_per_year = settings["STEPS_PER_YEAR"]
-    sim_steps = steps_per_year*settings["SIM_YEARS"]
+    sim_steps = steps_per_year * settings["SIM_YEARS"]
 
     proc_sp, imm_per_step = normalize_simulation_data(
         species_dict,
         settings["ANNUAL_MAINLAND_IMMIGRATION_RATE"],
         steps_per_year
     )
-    mainland_pt = (settings["GRID_WIDTH"]+20, settings["GRID_HEIGHT"]//2)
+    mainland_pt = (settings["GRID_WIDTH"] + 20, settings["GRID_HEIGHT"] // 2)
 
     model = GalapagosModel(
         width=settings["GRID_WIDTH"],
@@ -538,7 +608,6 @@ def run_simulation(settings: Dict[str, Any],
     )
 
     for i in range(sim_steps):
-        print(f"Running Step-{i}")
         model.step()
         if model.schedule.get_agent_count() == 0:
             break
@@ -552,6 +621,7 @@ if __name__ == "__main__":
     m, df = run_simulation(DEFAULTS, SPECIES_DATA_ANNUAL)
     print(df.tail())
     from matplotlib import pyplot as plt
+
     for sp in SPECIES_DATA_ANNUAL:
         col = f"{sp}_total"
         if col in df.columns:
