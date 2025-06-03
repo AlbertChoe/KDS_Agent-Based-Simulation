@@ -40,7 +40,7 @@ with st.sidebar:
     per_island = {}
     if st.checkbox("✏️  advanced: customise per-island start numbers"):
         # we need island ids ⇒ spin up tiny model just to read gis
-        from galapagos_model import GalapagosModel, normalize_simulation_data, GALAPAGOS_GIS_FILE, ISLAND_NAME_COLUMN_IN_GIS
+        from main import GalapagosModel, normalize_simulation_data, GALAPAGOS_GIS_FILE, ISLAND_NAME_COLUMN_IN_GIS
         tiny_proc, _ = normalize_simulation_data(species_dict, immig, steps_y)
         tiny = GalapagosModel(200, 200, GALAPAGOS_GIS_FILE, ISLAND_NAME_COLUMN_IN_GIS,
                               tiny_proc, 0, 0.0, (0, 0))
